@@ -41,6 +41,33 @@ def load_rows(path):
     return rows
 
 
+GAME_DERIVATIVES = re.compile(
+    r"\b(poster|posters|affiche|affiches|guide|guides|livre|livres|manga|amiibo|figurine|figurines|"
+    r"peluche|peluches|sticker|stickers|autocollant|autocollants|mug|tapis|coussin|tableau|"
+    r"t-shirt|tee-shirt|t shirt|vetement|porte-cle|porte-cles|porte cle|porte cles|soundtrack|ost)\b"
+)
+
+
+def product_type_conflict(item, reference):
+    """Le nom d’un jeu sur un produit dérivé ne suffit pas à identifier sa cartouche."""
+    research_id = reference.get('research', {}).get('id')
+    is_game = reference.get('category') == 'Jeux Switch' or isinstance(research_id, int) and 1 <= research_id <= 20
+    if not is_game:
+        return None
+    title = norm(item.get('title', ''))
+    hit = GAME_DERIVATIVES.search(title)
+    if hit:
+        explicit_game = re.search(r'\b(jeu|cartouche)\b', title)
+        # Un véritable jeu peut inclure un bonus ; un poster qui mentionne « jeu » reste exclu.
+        bonus = re.search(r'(?:avec|inclus|incluse|offert|bonus|\+)\s+(?:un |une |le |la )?' + re.escape(hit.group()) + r'\b', title)
+        if not (explicit_game and bonus and explicit_game.start() < hit.start()):
+            return f'Objet différent : {hit.group()} / produit dérivé, pas le jeu physique recherché'
+    description = norm(item.get('description', '')).strip()
+    if not re.search(r'\b(jeu|cartouche)\b', title) and GAME_DERIVATIVES.match(description):
+        return 'Objet différent : la description identifie un produit dérivé, pas une cartouche'
+    return None
+
+
 def evaluate(item, references, config, cash, profile=None):
     text = norm(str(item.get('title', '')) + ' ' + str(item.get('description', '')))
     price = money(item['price'])
@@ -62,6 +89,10 @@ def evaluate(item, references, config, cash, profile=None):
         return result
     ref = match[0]
     result['reference'] = ref.get('reference')
+    conflict = product_type_conflict(item, ref)
+    if conflict:
+        result.update(status='Exclu', reason=conflict)
+        return result
     if any(re.search(r'(?<!\w)'+re.escape(norm(term))+r'(?!\w)',text) for term in ref.get('forbidden_terms',[])):
         result['reason']='Version, contenu ou état incompatible avec cette fiche de prix'
         return result

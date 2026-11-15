@@ -19,7 +19,7 @@ const toolArt='<g transform="translate(48 12) rotate(-14 80 65)"><rect x="13" y=
 const objectArt='<g transform="translate(53 23) rotate(-8 65 60)"><path d="M0 30L65 0l65 30v80l-65 32L0 110Z" fill="#2f4345" stroke="#8aa193"/><path d="M0 30l65 31 65-31M65 61v81" fill="none" stroke="#8aa193"/><path d="M33 15l65 31v28l-25 12V59L8 27" fill="#9cbf7c" opacity=".65"/></g>';
 return '<svg viewBox="0 0 240 165" fill="none" aria-hidden="true">'+({console:consoleArt,camera:cameraArt,tool:toolArt,object:objectArt}[type])+'</svg>';}
 function source(item){return item.id.startsWith('demo:')?'SIMULATION':item.id.startsWith('ebay:')?'EBAY':item.id.startsWith('vinted:')?'VINTED':item.id.startsWith('leboncoin:')?'LEBONCOIN':'IMPORT';}
-function label(row){return row.status==='repéré' ? row.analysis.status==='Alerte'?'CRITÈRES REMPLIS':row.analysis.candidate?'SIGNAL À COMPLÉTER':'À VÉRIFIER' : row.status.toUpperCase();}
+function label(row){return row.status==='repéré' ? row.analysis.status==='Exclu'?'OBJET DIFFÉRENT':row.analysis.status==='Alerte'?'CRITÈRES REMPLIS':row.analysis.candidate?'SIGNAL À COMPLÉTER':'À VÉRIFIER' : row.status.toUpperCase();}
 function visual(item, detail=false){
   let image='';
   try{const url=new URL(item.image_url);const host=url.hostname;if(url.protocol==='https:'&&['vinted.net','vinted.fr','leboncoin.fr','ebayimg.com','lbcimg.fr'].some(domain=>host===domain||host.endsWith('.'+domain)))image=`<img class="product-photo" src="${esc(url.href)}" alt="Photo de ${esc(item.title)}" referrerpolicy="no-referrer" loading="lazy">`;}catch{}

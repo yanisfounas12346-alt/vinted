@@ -91,7 +91,7 @@ class Dashboard:
             rows.append(dict(row) | {'item': item, 'analysis': result})
         return dict(demo=self.demo, cash=cash, invested=invested, profit=profit, rows=rows,
                     config=self.config, references=references, ebay_ready=bool(self.ebay_token), scanner=self.scanner.snapshot(),
-                    events=list(self.events[-30:]), bridge=dict(last_seen=self.bridge_last, received=self.bridge_count), version='0.4',pricing_profile=self.pricing_profile,analysis=dict(
+                    events=list(self.events[-30:]), bridge=dict(last_seen=self.bridge_last, received=self.bridge_count), version='0.4.1',pricing_profile=self.pricing_profile,analysis=dict(
                         as_of=self.analysis_bundle['as_of'],sources=self.analysis_bundle['sources'],limitations=self.analysis_bundle['limitations'],
                         items=[dict(ref,preview=quote(ref,self.effective_pricing(),cash)) for ref in references if ref.get('research')]))
 

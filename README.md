@@ -1,6 +1,10 @@
-# REPÈRE V.04 — Surveillance et arbitrage sur PC
+# REPÈRE V.04.1 — Surveillance et arbitrage sur PC
 
 Tableau de bord local Windows : annonces réelles, images disponibles, surveillance, journal, cotes documentées, calcul de marge et suivi des achats/encaissements. Aucun achat automatique et aucun Telegram.
+
+## Correction V.04.1 — identité des jeux
+
+Un poster Zelda pouvait hériter du prix de la cartouche en raison du titre partagé. Le moteur exclut désormais les posters, affiches, guides, figurines, vêtements et autres produits dérivés identifiés dans le titre des 20 jeux ciblés, ou une description qui identifie explicitement un dérivé. Ces annonces affichent « Objet différent », sans cote, marge ni signal de jeu. Les jeux avec un bonus explicitement identifié restent analysables. Les anciennes annonces sont recalculées après redémarrage, sans réimportation. L’identification reste textuelle : un titre incomplet ou trompeur doit toujours être contrôlé.
 
 ## Nouveautés V.04 — analyses et livraison intégrées
 
@@ -121,4 +125,4 @@ python -m unittest discover -s tests -v
 node --check web/dashboard.js
 ```
 
-37 tests Python passent. La syntaxe des quatre scripts JavaScript, le manifeste de l’extension et les cibles HTML ont également été contrôlés. Tests : coûts connus/inconnus, calibration sur ventes, refus de schéma invalide, suspension sans nouvelle tentative après refus, arrêt avant import tardif, séparation réel/test, édition vérifiée, suivi du cash et authentification HTTP locale. Les fixtures et mocks ne constituent pas un test réel des plateformes. Le navigateur de test distant ne peut pas joindre le serveur local dans cet environnement ; la vérification visuelle et le test de l’extension sur votre navigateur restent à faire.
+42 tests Python passent. La syntaxe des quatre scripts JavaScript, le manifeste de l’extension et les cibles HTML ont également été contrôlés. Tests : coûts connus/inconnus, calibration sur ventes, refus de schéma invalide, suspension sans nouvelle tentative après refus, arrêt avant import tardif, séparation réel/test, édition vérifiée, suivi du cash et authentification HTTP locale. Les fixtures et mocks ne constituent pas un test réel des plateformes. Le navigateur de test distant ne peut pas joindre le serveur local dans cet environnement ; la vérification visuelle et le test de l’extension sur votre navigateur restent à faire.

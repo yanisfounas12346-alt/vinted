@@ -1,4 +1,4 @@
-REPERE V.04 — DEMARRAGE WINDOWS
+REPERE V.04.1 — DEMARRAGE WINDOWS
 
 1. Extraire tout le ZIP (ne pas lancer depuis l'archive).
 2. Installer Python 3.11 ou plus recent si necessaire.
@@ -22,3 +22,6 @@ Le logiciel ne promet aucun rendement ni prix de reprise garanti.
 NOUVEAU : menu Analyses des 50 produits. Cliquer une fiche pour lire ses
 sources et simuler une annonce. Frais & livraison recalcule les plafonds.
 32 estimations provisoires, 18 dossiers suspendus : aucun prix garanti.
+
+CORRECTION : les posters et produits derives identifiables ne recoivent
+plus la cote des jeux. Les annonces deja importees sont recalculees.
