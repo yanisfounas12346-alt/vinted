@@ -1,0 +1,2 @@
+# Facultatif : notifications du système en complément du son et de la fenêtre.
+plyer==2.1.0
