@@ -12,11 +12,12 @@ from urllib.parse import urlparse
 from connectors import ebay_search
 from scanner import Scanner
 from valuation import validate_reference, calibrate
+from pricing import DEFAULT_PROFILE, validate_profile, quote
 from contextlib import closing
 from datetime import datetime, timezone
 import os
 import time
-from engine import Store, evaluate, load_rows, money
+from engine import Store, evaluate, load_rows, money, norm
 
 BASE = Path(__file__).resolve().parent
 DEFAULT = dict(initial_capital=100, max_position=33, min_margin=25, sale_fee_rate=0,
@@ -28,6 +29,9 @@ class Dashboard:
         self.directory.mkdir(exist_ok=True)
         path = self.directory / 'config.json'
         self.config = DEFAULT | (json.loads(path.read_text()) if path.exists() else {})
+        self.analysis_bundle=json.loads((BASE / 'analysis_50.json').read_text(encoding='utf-8'))
+        pricing_path=self.directory / 'pricing_profile.json'
+        self.pricing_profile=validate_profile(json.loads(pricing_path.read_text(encoding='utf-8')) if pricing_path.exists() else DEFAULT_PROFILE)
         self.demo = False
         self.lock = threading.RLock()
         self.ebay_token = os.environ.get('EBAY_ACCESS_TOKEN', '').strip()
@@ -47,12 +51,30 @@ class Dashboard:
         return Store(self.directory / ('demo.sqlite3' if self.demo else 'portfolio.sqlite3'))
 
     def references(self):
-        path = self.directory / 'references.json'
-        rows = json.loads(path.read_text(encoding='utf-8')) if not self.demo and path.exists() else load_rows(BASE / ('references_demo.csv' if self.demo else 'references.csv'))
         if self.demo:
-            for row in rows:
-                row['checked_on'] = date.today().isoformat()
-        return rows
+            rows=load_rows(BASE / 'references_demo.csv')
+            for row in rows:row['checked_on']=date.today().isoformat()
+            return rows
+        seed={r['reference']:dict(r) for r in self.analysis_bundle['items']}
+        path=self.directory / 'references.json'
+        if path.exists():
+            legacy_names={r['reference'] for r in load_rows(BASE / 'references.csv')}
+            for row in json.loads(path.read_text(encoding='utf-8')):
+                name=row['reference']
+                if name not in seed:
+                    if name in legacy_names and not money(row.get('floor') or 0) and not row.get('source'):
+                        continue  # Anciens modèles vides, pas des devis personnels.
+                    aliases={norm(a.strip()) for a in row.get('aliases','').split('|') if a.strip()}
+                    matches=[key for key,r in seed.items() if aliases.intersection(norm(a.strip()) for a in r.get('aliases','').split('|') if a.strip())]
+                    if len(matches)==1:
+                        target=matches[0]
+                        seed[target]=seed[target] | row | {'reference':target,'legacy_reference_name':name}
+                        continue
+                seed[name]=seed.get(name,{}) | row
+        return list(seed.values())
+
+    def effective_pricing(self):
+        return self.pricing_profile | {'max_position':min(money(self.pricing_profile['max_position']),money(self.config['max_position']))/100}
 
     def state(self, store):
         cash = store.cash(self.config['initial_capital'])
@@ -61,7 +83,7 @@ class Dashboard:
         references = self.references()
         for row in store.rows():
             item = json.loads(row['payload'])
-            result = evaluate(item, references, self.config, cash)
+            result = evaluate(item, references, self.config, cash,self.effective_pricing())
             if row['status'] == 'acheté':
                 invested += row['cost']
             if row['status'] == 'vendu':
@@ -69,7 +91,9 @@ class Dashboard:
             rows.append(dict(row) | {'item': item, 'analysis': result})
         return dict(demo=self.demo, cash=cash, invested=invested, profit=profit, rows=rows,
                     config=self.config, references=references, ebay_ready=bool(self.ebay_token), scanner=self.scanner.snapshot(),
-                    events=list(self.events[-30:]), bridge=dict(last_seen=self.bridge_last, received=self.bridge_count), version='0.3')
+                    events=list(self.events[-30:]), bridge=dict(last_seen=self.bridge_last, received=self.bridge_count), version='0.4',pricing_profile=self.pricing_profile,analysis=dict(
+                        as_of=self.analysis_bundle['as_of'],sources=self.analysis_bundle['sources'],limitations=self.analysis_bundle['limitations'],
+                        items=[dict(ref,preview=quote(ref,self.effective_pricing(),cash)) for ref in references if ref.get('research')]))
 
     def log(self, message, level='info'):
         with self.lock:
@@ -125,9 +149,35 @@ class Dashboard:
                         raise ValueError('Jeton invalide')
                     self.ebay_token = token
                     self.log('Jeton eBay mis à jour en mémoire uniquement.')
+                elif action == 'analysis_quote':
+                    ref=next((r for r in self.references() if r['reference']==payload.get('reference')),None)
+                    if not ref or not ref.get('research'):raise ValueError('Fiche d’analyse inconnue')
+                    values={k:payload.get(k) for k in ('price','shipping','buyer_fee')}
+                    if values['price'] in ('',None):raise ValueError('Prix d’achat requis')
+                    return dict(quote=quote(ref,self.effective_pricing(),store.cash(self.config['initial_capital']),values))
+                elif action == 'reference_costs':
+                    refs=self.references()
+                    ref=next((r for r in refs if r['reference']==payload.get('reference')),None)
+                    if not ref or not ref.get('research'):raise ValueError('Fiche inconnue')
+                    weight=int(payload['packed_weight_g'])
+                    if not 1<=weight<=4000:raise ValueError('Poids : de 1 à 4 000 g pour les grilles intégrées')
+                    packaging=money(payload['packaging_eur'])/100
+                    testing=money(payload['testing_eur'])/100
+                    rate=float(payload['ebay_rate_ht'])
+                    money(rate)
+                    if rate>1:raise ValueError('Commission HT : fraction de 0 à 1')
+                    updated=ref | dict(packed_weight_g=weight,packaging_eur=packaging,testing_eur=testing,ebay_rate_ht=rate,shipping_entered_on=date.today().isoformat())
+                    self.write_json('references.json',[updated if r['reference']==ref['reference'] else r for r in refs])
+                elif action == 'pricing_settings':
+                    values={k:payload[k] for k in DEFAULT_PROFILE if k in payload}
+                    updated=validate_profile(self.pricing_profile | values)
+                    self.write_json('pricing_profile.json',updated)
+                    self.pricing_profile=updated
+                    self.log('Prévisions de frais et livraison mises à jour ; plafonds recalculés.')
                 elif action == 'reference_save':
                     if self.demo: raise ValueError('Revenir au réel pour modifier les cotes')
-                    ref = validate_reference(payload)
+                    previous=next((r for r in self.references() if r['reference']==payload.get('reference')), {})
+                    ref = previous | validate_reference(payload)
                     refs = self.references()
                     refs = [r for r in refs if r['reference'] != ref['reference']] + [ref]
                     self.write_json('references.json',refs)

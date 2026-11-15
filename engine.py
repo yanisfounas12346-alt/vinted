@@ -41,7 +41,7 @@ def load_rows(path):
     return rows
 
 
-def evaluate(item, references, config, cash):
+def evaluate(item, references, config, cash, profile=None):
     text = norm(str(item.get('title', '')) + ' ' + str(item.get('description', '')))
     price = money(item['price'])
     known_costs = all(item.get(k) is not None and str(item[k]).strip() != '' for k in ('shipping', 'buyer_fee'))
@@ -62,6 +62,31 @@ def evaluate(item, references, config, cash):
         return result
     ref = match[0]
     result['reference'] = ref.get('reference')
+    if any(re.search(r'(?<!\w)'+re.escape(norm(term))+r'(?!\w)',text) for term in ref.get('forbidden_terms',[])):
+        result['reason']='Version, contenu ou état incompatible avec cette fiche de prix'
+        return result
+    if ref.get('research'):
+        from pricing import quote, DEFAULT_PROFILE
+        forecast=quote(ref,profile or DEFAULT_PROFILE,cash,item)
+        result.update(floor=forecast['resale'], margin=forecast['margin'],cost=forecast['purchase_total'],
+            costs_known=not forecast['estimated_costs'],forecast=forecast,estimate_only=not forecast['resale_is_verified'])
+        try:
+            age=(date.today()-date.fromisoformat(ref.get('checked_on',''))).days
+        except ValueError:
+            age=9999
+        valid=forecast['resale_is_verified'] and 0<=age<=30 and bool(ref.get('source'))
+        if not valid:reasons.append('Estimation documentée provisoire : ventes comparables insuffisantes pour une cote validée')
+        if forecast['estimated_costs']:reasons.append('Livraison et frais d’achat estimés, à confirmer au paiement')
+        if TOXIC.search(text):reasons.append('Défaut / authenticité à contrôler')
+        if int(item.get('seller_reviews') or 0)<3:reasons.append('Avis positifs du vendeur à contrôler')
+        if item.get('condition_confirmed') is not True:reasons.append('État, version et accessoires à valider')
+        if not forecast['can_buy']:reasons.append('Modèle suspendu ou marge insuffisante dans ce scénario de livraison')
+        if price>forecast['cap_price'] or forecast['purchase_total']>forecast['cap_total']:
+            reasons.append('Prix au-dessus du plafond frais compris')
+        result['candidate']=bool(forecast['can_buy'] and forecast['cap_price']>0 and price<=forecast['cap_price'] and not TOXIC.search(text))
+        result['status']='Alerte' if not reasons else 'À vérifier'
+        result['reason']=' ; '.join(dict.fromkeys(reasons)) or 'Critères remplis, disponibilité à vérifier avant achat'
+        return result
     floor = money(ref['floor'])
     result['floor'] = floor
     try:

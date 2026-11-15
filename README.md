@@ -1,6 +1,21 @@
-# REPÈRE V.03 — Surveillance et arbitrage sur PC
+# REPÈRE V.04 — Surveillance et arbitrage sur PC
 
 Tableau de bord local Windows : annonces réelles, images disponibles, surveillance, journal, cotes documentées, calcul de marge et suivi des achats/encaissements. Aucun achat automatique et aucun Telegram.
+
+## Nouveautés V.04 — analyses et livraison intégrées
+
+- **Analyses des 50 produits** : conclusions individuelles, liens des observations, exclusions (HS, boîte vide, mauvaises versions, ventes non prouvées, prix d’offre masqués), qualité des données et contrôles du produit. Rapport complet : **ANALYSE_50_PRODUITS.md**.
+- **Frais & livraison** : coût d’achat expédié ou main propre, Mondial Relay ou Colissimo, port de revente offert ou facturé à l’acheteur, frais eBay sur objet + port, TVA sur frais, réserves d’activité/risques et marge cible. Tous les montants sont en euros ; les taux sont des fractions.
+- Les cartes reconnues affichent **marge prévue**, **plafond du prix de l’article** et port de revente. Si les frais d’achat ne sont pas connus, ils sont estimés et clairement signalés. Les plafonds ne sont plus un simple ratio de 50 % du prix de revente.
+- Chaque fiche peut être simulée avec un prix d’achat précis et les frais réellement affichés au paiement. Le poids emballé, l’emballage, les tests et la commission de catégorie se modifient dans la fiche.
+- Le tarif public de transport est un scénario : le tarif négocié Vinted peut être différent. Le poids doit être pesé. Le prix capturé est supposé hors protection acheteur ; contrôler le paiement avant de saisir les frais pour ne pas les compter deux fois.
+- Les prix de recherche restent des estimations provisoires, pas des prix planchers garantis. Les dossiers insuffisants n’ont aucun plafond actif. Les devis/cotes personnels déjà saisis sont conservés. Un devis manuel documenté ou cinq ventes comparables importées peuvent remplacer l’estimation.
+- La réserve d’activité de 15 % est une hypothèse de trésorerie, pas une déclaration de taux légal unique ; la marge est avant impôt sur le revenu et charges fixes. Les tarifs eBay intégrés supposent un compte professionnel France et une TVA de 20 % sur frais non récupérée : ajuster selon la facture et la catégorie réelle.
+- Les 2 € de test Instax sont une provision de consommable par objet : s’il faut acheter un pack complet pour tester, renseigner la dépense effective et garder le cash nécessaire. Pas de réparation incluse par défaut.
+
+### Mise à jour sans perdre le portefeuille
+
+Fermer l’ancien terminal, extraire le nouveau ZIP dans un **nouveau dossier**, copier le dossier **data/** de l’ancienne version vers ce nouveau dossier, puis lancer **Lancer.bat**. L’extension reste compatible ; si le port local change, recopier sa configuration depuis Connexions. Ne pas envoyer le contenu de data/ sur GitHub.
 
 ## Installation et mise à jour
 
@@ -46,7 +61,7 @@ Documentation : https://developer.ebay.com/develop/api/buy/browse_api . L’API 
 
 ## Cotes et marges
 
-**Références & cotes** contient 50 modèles à documenter, sans prix inventés. Cliquer sur une ligne pour saisir la cote, la date et la source (vente comparable ou devis). La reconnaissance utilise des alias exacts ; elle peut manquer des fautes ou des modèles ambigus. Vérifier la génération, la version, la langue, les accessoires et l’état exacts. Les jeux Pokémon exigent un contrôle d’authenticité ; aucun logiciel ne le garantit.
+**Analyses des 50 produits** charge 50 fiches de recherche : 32 estimations provisoires et 18 dossiers suspendus. Elles ne constituent pas 50 cotes de ventes validées. **Références & cotes** permet de saisir un devis documenté ou une cote personnelle. Cliquer sur une ligne pour saisir la cote, la date et la source (vente comparable ou devis). La reconnaissance utilise des alias exacts ; elle peut manquer des fautes ou des modèles ambigus. Vérifier la génération, la version, la langue, les accessoires et l’état exacts. Les jeux Pokémon exigent un contrôle d’authenticité ; aucun logiciel ne le garantit.
 
 La cote peut aussi être calculée à partir de vos ventes comparables : **Importer des ventes terminées**. Format CSV du fichier **ventes_modele.csv** :
 
@@ -71,7 +86,7 @@ L’outil distingue :
 
 Cliquer une carte pour compléter **Port achat**, **Protection / frais achat**, **Avis positifs** et la confirmation d’inspection. Si le prix change lors d’une collecte suivante, les frais précédemment vérifiés sont invalidés pour recalcul. Un coût inconnu ne devient jamais automatiquement zéro ; la marge reste « À compléter ». Les vérifications manuelles d’état et les descriptions sont préservées lors du dédoublonnage.
 
-Dans **Paramètres**, renseigner frais de vente, réserve sur chiffre d’affaires, emballage, port de revente, réserve défauts, plafond par objet et marge minimale. Les taux sont des fractions : 0,10 = 10 %. Frais de vente et réserve sur CA sont à zéro initialement, à adapter à votre situation avant usage. Aucune valeur ne constitue un conseil fiscal ou une cote garantie. Pas de garantie de vente, de délai ou de bénéfice.
+Pour les 50 fiches, utiliser **Analyses des 50 produits → Frais & livraison** et les coûts de chaque modèle. Les anciens champs de frais dans **Paramètres** restent utilisés pour les références personnelles sans fiche de recherche. Les taux sont des fractions : 0,10 = 10 %. Frais de vente et réserve sur CA sont à zéro initialement, à adapter à votre situation avant usage. Aucune valeur ne constitue un conseil fiscal ou une cote garantie. Pas de garantie de vente, de délai ou de bénéfice.
 
 ## Capital, suivi et alertes PC
 
@@ -87,7 +102,7 @@ CSV/JSON d’annonces normalisées : `id,title,price`, puis `shipping,buyer_fee,
 
 Pas de modèle ML entraîné, pas d’authentification automatique des objets et pas d’OCR dans cette version. Les règles sont explicables et la calibration est statistique. La collecte n’est pas autorisée ou fiable par le seul fait qu’un dépôt GitHub existe : utiliser les plateformes dans les conditions applicables. Les changements d’API ou de DOM peuvent nécessiter une mise à jour des connecteurs.
 
-L’ancienne interface Tkinter (`python app.py`) est conservée pour compatibilité mais le parcours V.03 décrit ici utilise **desktop.py**. Les anciennes données de démonstration servent aux tests internes, sans bouton de démonstration dans l’interface principale.
+L’ancienne interface Tkinter (`python app.py`) est conservée pour compatibilité mais le parcours V.04 décrit ici utilise **desktop.py**. Les anciennes données de démonstration servent aux tests internes, sans bouton de démonstration dans l’interface principale.
 
 ## Projets GitHub étudiés
 
@@ -106,4 +121,4 @@ python -m unittest discover -s tests -v
 node --check web/dashboard.js
 ```
 
-21 tests Python passent. La syntaxe des quatre scripts JavaScript, le manifeste de l’extension et les cibles HTML ont également été contrôlés. Tests : coûts connus/inconnus, calibration sur ventes, refus de schéma invalide, suspension sans nouvelle tentative après refus, arrêt avant import tardif, séparation réel/test, édition vérifiée, suivi du cash et authentification HTTP locale. Les fixtures et mocks ne constituent pas un test réel des plateformes. Le navigateur de test distant ne peut pas joindre le serveur local dans cet environnement ; la vérification visuelle et le test de l’extension sur votre navigateur restent à faire.
+37 tests Python passent. La syntaxe des quatre scripts JavaScript, le manifeste de l’extension et les cibles HTML ont également été contrôlés. Tests : coûts connus/inconnus, calibration sur ventes, refus de schéma invalide, suspension sans nouvelle tentative après refus, arrêt avant import tardif, séparation réel/test, édition vérifiée, suivi du cash et authentification HTTP locale. Les fixtures et mocks ne constituent pas un test réel des plateformes. Le navigateur de test distant ne peut pas joindre le serveur local dans cet environnement ; la vérification visuelle et le test de l’extension sur votre navigateur restent à faire.
