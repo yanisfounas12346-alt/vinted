@@ -1,28 +1,29 @@
 # Repère — Arbitrage sur PC
 
-Application Python native, orientée Windows, sans Telegram, sans serveur et sans achat automatique. Première version : moteur de règles explicables, pas de modèle ML entraîné ni de rendement promis.
+Application PC avec tableau de bord futuriste sombre, orientée Windows, sans Telegram et sans achat automatique. Une interface navigateur communique avec un petit serveur Python lié uniquement à 127.0.0.1 ; aucun hébergement externe. Première version : moteur de règles explicables, pas de modèle ML entraîné ni de rendement promis.
 
 ## Démarrage Windows
 
 1. Installer Python 3.11 ou supérieur depuis https://www.python.org/downloads/ avec **Add Python to PATH** et Tcl/Tk.
 2. Sur GitHub : **Code → Download ZIP**, puis extraire le ZIP dans un dossier où vous pouvez écrire.
 3. Double-cliquer sur **Lancer.bat**.
-4. Cliquer sur **Démo / Réel** pour essayer des annonces fictives. Le portefeuille démo utilise une base séparée du portefeuille réel.
+4. Cliquer sur **Explorer la démo** pour essayer des annonces fictives. Le portefeuille démo utilise une base séparée du portefeuille réel.
 
-Aucune installation pip obligatoire. Linux : installer le paquet `python3-tk` si nécessaire. macOS : utiliser une installation Python avec Tk. Lancer avec `python app.py`.
+Aucune installation pip obligatoire pour le nouveau tableau de bord. Tkinter est uniquement nécessaire pour l’ancienne interface. Linux (ancienne interface) : installer le paquet `python3-tk` si nécessaire. macOS : utiliser une installation Python avec Tk. Lancer avec `python desktop.py`. La fenêtre navigateur s’ouvre automatiquement. Garder le terminal ouvert ; Ctrl+C arrête le serveur local. L’ancienne interface Tkinter reste accessible avec `python app.py`.
 
 ## Ce qui fonctionne
 
 - Import CSV ou JSON normalisé ; validation du lot avant écriture, dédoublonnage par identifiant stable.
-- Surveillance d'un fichier local toutes les 5 secondes : un collecteur autorisé externe peut le remplacer atomiquement.
+- Dans l’ancienne interface Tkinter uniquement, surveillance d'un fichier local toutes les 5 secondes : un collecteur autorisé externe peut le remplacer atomiquement.
 - Reconnaissance par alias exacts, filtrage des défauts et revue du vendeur.
 - Cote documentée de moins de 31 jours obligatoire pour une alerte ; toutes les cotes réelles sont initialement à zéro.
 - Coût achat + transport + protection acheteur ; estimation de marge après frais configurables, emballage et réserve défauts.
-- Son, titre de fenêtre et ligne verte lors d'une nouvelle opportunité. Notifications système facultatives avec `python -m pip install -r requirements-optional.txt` ; disponibilité selon le système.
+- Nouveau tableau de bord : cartes illustrées, filtres, tri, recherche, portefeuille, cotes, paramètres, export et panneau d’inspection. Les illustrations SVG sont génériques, pas les photos réelles. Le radar est une animation d’état explicitement signalée, pas un scan du marché.
+- Alertes sonores dans le nouveau tableau de bord après activation avec le bouton ♪. Ancienne interface : son, titre de fenêtre et ligne verte lors d'une nouvelle opportunité. Notifications système facultatives avec `python -m pip install -r requirements-optional.txt` ; disponibilité selon le système.
 - Capital initial 100 €, plafond par objet 33 € frais inclus, achats et encaissements saisis manuellement, export du suivi CSV.
 - Recherche eBay Browse API à la demande dans un thread pour garder la fenêtre réactive.
 
-Le programme et les alertes doivent rester ouverts sur le PC ; pas de service en arrière-plan à la fermeture. Pas de photo/OCR dans cette version. Aucun délai de revente garanti. Les alertes ne sont pas des probabilités d'absence d'arnaque.
+Le programme et les alertes doivent rester ouverts sur le PC ; pas de service en arrière-plan à la fermeture. Pas de photo réelle/OCR dans cette version. Aucun délai de revente garanti. Les alertes ne sont pas des probabilités d'absence d'arnaque.
 
 ## Références et frais
 
@@ -46,14 +47,14 @@ Créer une application dans le programme développeurs eBay, obtenir l'accès re
 
 ```powershell
 $env:EBAY_ACCESS_TOKEN = 'VOTRE_JETON_OAUTH'
-py -3 app.py
+py -3 desktop.py
 ```
 
 Le jeton reste dans l'environnement, jamais dans le dépôt. Il expire : le remplacer lorsque nécessaire. Recherche manuelle uniquement, maximum 50 résultats par appel. Pas d'achat ni d'accès aux ventes terminées. Les résultats sans frais de port explicites en EUR sont ignorés. Les frais, la destination, les taxes éventuelles et la disponibilité doivent être revérifiés sur l'annonce avant paiement. Le nombre d'avis eBay n'est pas une certification de confiance.
 
 ## Suivi du capital
 
-**Enregistrer un achat** enregistre une opération déjà effectuée et demande le coût payé total. **Enregistrer une vente encaissée** crédite uniquement la somme nette effectivement reçue, toutes réserves et frais déduits. Une annonce « vendue » dont le paiement est bloqué ne doit pas encore être enregistrée comme encaissée. Aucun paiement n'est effectué par l'application.
+**Enregistrer un achat** enregistre une opération déjà effectuée et demande le coût payé total. **Enregistrer la vente** crédite uniquement la somme nette effectivement reçue, toutes réserves et frais déduits. Une annonce « vendue » dont le paiement est bloqué ne doit pas encore être enregistrée comme encaissée. Aucun paiement n'est effectué par l'application.
 
 Les données sont dans **data/**, ignoré par Git. Sauvegarder ce dossier pour préserver l'historique. La version initiale ne propose pas d'annulation d'opération ni de baisse automatique de prix après 7 jours. L'export conserve les dates d'achat et de vente pour une revue manuelle.
 
@@ -77,4 +78,12 @@ Documentation eBay : https://developer.ebay.com/develop/api/buy/browse_api et ht
 python -m unittest discover -s tests -v
 ```
 
-Tests du moteur : coûts, défauts, budget, cotes périmées, dédoublonnage, validation atomique, achat unique et encaissement unique. Le connecteur eBay nécessite des identifiants utilisateur pour un test en production.
+Tests du moteur et du serveur local : coûts, défauts, budget, cotes périmées, dédoublonnage, validation atomique, achat unique et encaissement unique. Le connecteur eBay nécessite des identifiants utilisateur pour un test en production.
+
+## Interface V.02
+
+Navigation : radar d’opportunités, portefeuille et références. Les cartes ouvrent une inspection avec les raisons du signal, les montants et un formulaire d’enregistrement manuel. Importer des CSV/JSON via le sélecteur de fichiers. Le bouton Actualiser relit les données locales, sans lancer de scan réseau. Le mode Démo reste nettement signalé. La surveillance de fichier et les notifications système Plyer restent propres à l’ancienne interface Tkinter ; la nouvelle utilise ses propres alertes sonores de navigateur.
+
+Le serveur local utilise un jeton de session et vérifie l’hôte et l’origine des requêtes. Aucun secret n’est écrit dans Git. Le contenu des annonces est affiché comme du texte.
+
+Validation V.02 : 12 tests automatisés passent (moteur, serveur HTTP, isolation démo/réel, validation des paramètres et contrôle de session). La prévisualisation graphique distante ne peut pas joindre le serveur local de cet environnement ; le rendu et les interactions navigateur restent à vérifier sur le PC Windows.

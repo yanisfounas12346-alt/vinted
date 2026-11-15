@@ -2,3 +2,6 @@ id,title,description,price,shipping,buyer_fee,seller_reviews,url
 demo:1,New 3DS XL,Fonctionnelle avec chargeur EXEMPLE FICTIF,20,3,2,12,
 demo:2,Switch Lite,pour pièces ne s'allume pas EXEMPLE FICTIF,18,3,2,9,
 demo:3,New 3DS XL,Fonctionnelle EXEMPLE FICTIF,90,5,2,0,
+demo:4,Canon EF 50mm f/1.4,Fonctionnel avec bouchons EXEMPLE FICTIF,22,3,2,18,
+demo:5,Perceuse Makita DDF482,Outil seul testé sans batterie EXEMPLE FICTIF,24,3,2,34,
+demo:6,Lot jeux Nintendo,Modèles à identifier EXEMPLE FICTIF,15,3,2,7,

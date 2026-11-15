@@ -45,8 +45,9 @@ def evaluate(item, references, config, cash):
     reasons = []
     match = [r for r in references if any(re.search(r'(?<!\w)' + re.escape(norm(a.strip())) + r'(?!\w)', text)
              for a in r['aliases'].split('|') if a.strip())]
+    cost = money(item['price']) + money(item['shipping']) + money(item['buyer_fee'])
     if len(match) != 1:
-        return {'status': 'À vérifier', 'reason': 'Référence absente ou ambiguë', 'floor': 0, 'margin': 0, 'cost': 0}
+        return {'status': 'À vérifier', 'reason': 'Référence absente ou ambiguë', 'floor': 0, 'margin': 0, 'cost': cost}
     ref = match[0]
     cost = money(item['price']) + money(item['shipping']) + money(item['buyer_fee'])
     floor = money(ref['floor'])
