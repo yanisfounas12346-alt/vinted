@@ -5,6 +5,7 @@ import re
 import sqlite3
 import unicodedata
 from datetime import date, datetime, timezone
+from contextlib import closing
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
@@ -41,38 +42,55 @@ def load_rows(path):
 
 
 def evaluate(item, references, config, cash):
-    text = norm(item.get('title', '') + ' ' + item.get('description', ''))
-    reasons = []
+    text = norm(str(item.get('title', '')) + ' ' + str(item.get('description', '')))
+    price = money(item['price'])
+    known_costs = all(item.get(k) is not None and str(item[k]).strip() != '' for k in ('shipping', 'buyer_fee'))
+    cost = price + sum(money(item[k]) for k in ('shipping', 'buyer_fee') if item.get(k) not in (None, ''))
     match = [r for r in references if any(re.search(r'(?<!\w)' + re.escape(norm(a.strip())) + r'(?!\w)', text)
              for a in r['aliases'].split('|') if a.strip())]
-    cost = money(item['price']) + money(item['shipping']) + money(item['buyer_fee'])
+    # Garder l’alias le plus spécifique en cas de chevauchement (New 3DS XL / 3DS XL).
+    if len(match) > 1:
+        lengths = [(max((len(norm(a.strip())) for a in r['aliases'].split('|') if norm(a.strip()) in text), default=0), r) for r in match]
+        largest = max(n for n, _ in lengths)
+        match = [r for n, r in lengths if n == largest]
+    result = dict(status='À vérifier', reason='', floor=0, margin=None, cost=cost, costs_known=known_costs, reference=None, candidate=False)
+    reasons = []
+    if not known_costs:
+        reasons.append('Port et/ou protection acheteur inconnus : compléter la fiche')
     if len(match) != 1:
-        return {'status': 'À vérifier', 'reason': 'Référence absente ou ambiguë', 'floor': 0, 'margin': 0, 'cost': cost}
+        result['reason'] = 'Référence absente ou ambiguë' + (' ; ' + ' ; '.join(reasons) if reasons else '')
+        return result
     ref = match[0]
-    cost = money(item['price']) + money(item['shipping']) + money(item['buyer_fee'])
+    result['reference'] = ref.get('reference')
     floor = money(ref['floor'])
-    fees = money(ref['floor']) * Decimal(str(config['sale_fee_rate']))
-    tax = floor * Decimal(str(config['turnover_reserve_rate']))
-    margin = floor - cost - int(fees + tax) - money(config['sale_shipping']) - money(config['packaging']) - money(config['risk_reserve'])
-    if TOXIC.search(text):
-        reasons.append('Défaut / authenticité / test à vérifier')
-    if int(item.get('seller_reviews') or 0) < 3:
-        reasons.append('Moins de 3 avis vendeur : contrôle nécessaire')
+    result['floor'] = floor
     try:
         age = (date.today() - date.fromisoformat(ref['checked_on'])).days
         valid = 0 <= age <= 30 and bool(ref.get('source')) and floor > 0
     except (ValueError, KeyError):
         valid = False
     if not valid:
-        reasons.append('Cote non documentée ou âgée de plus de 30 jours')
-    if margin < money(config['min_margin']):
-        reasons.append('Marge insuffisante')
+        reasons.append('Cote à documenter ou âgée de plus de 30 jours')
+    if TOXIC.search(text):
+        reasons.append('Défaut / authenticité / test à vérifier')
+    if int(item.get('seller_reviews') or 0) < 3:
+        reasons.append('Avis positifs du vendeur à vérifier (minimum 3)')
+    if item.get('condition_confirmed') is not True:
+        reasons.append('État et authenticité non validés')
+    if floor and known_costs:
+        fees = Decimal(floor) * (Decimal(str(config['sale_fee_rate'])) + Decimal(str(config['turnover_reserve_rate'])))
+        margin = floor - cost - int(fees.quantize(Decimal('1'), rounding=ROUND_HALF_UP)) - sum(money(config[k]) for k in ('sale_shipping', 'packaging', 'risk_reserve'))
+        result['margin'] = margin
+        if margin < money(config['min_margin']):
+            reasons.append('Marge insuffisante')
     if cost > min(money(config['max_position']), cash):
-        reasons.append('Budget dépassé (frais inclus)')
-    if money(item['price']) * 2 > floor:
+        reasons.append('Budget dépassé (frais connus inclus)')
+    if price * 2 > floor:
         reasons.append('Prix supérieur à 50 % de la cote')
-    return {'status': 'À vérifier' if reasons else 'Alerte', 'reason': ' ; '.join(reasons) or 'Critères remplis — inspection humaine requise',
-            'floor': floor, 'margin': margin, 'cost': cost}
+    result['candidate'] = valid and price * 2 <= floor and not TOXIC.search(text) and price <= min(money(config['max_position']), cash)
+    result['status'] = 'À vérifier' if reasons else 'Alerte'
+    result['reason'] = ' ; '.join(reasons) or 'Critères remplis — vérifier encore la disponibilité avant paiement'
+    return result
 
 
 class Store:
@@ -82,28 +100,46 @@ class Store:
         self.db.execute('CREATE TABLE IF NOT EXISTS listings (id TEXT PRIMARY KEY, payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT "repéré", cost INTEGER, bought_on TEXT, proceeds INTEGER, sold_on TEXT)')
         self.db.commit()
 
+    def close(self):
+        self.db.close()
+
     def ingest(self, rows):
         # Valider tout le lot avant d’écrire : aucun import partiel silencieux.
         clean = []
         for index, row in enumerate(rows, 1):
-            required = ('id', 'title', 'price', 'shipping', 'buyer_fee')
+            required = ('id', 'title', 'price')
             if not isinstance(row, dict) or any(str(row.get(k, '')).strip() == '' for k in required):
                 raise ValueError(f'Ligne {index} : champs obligatoires {required}')
-            for k in ('price', 'shipping', 'buyer_fee'):
-                money(row[k])
+            money(row['price'])
+            for k in ('shipping', 'buyer_fee'):
+                if row.get(k) not in (None, ''):
+                    money(row[k])
+                else:
+                    row[k] = None
+            if not isinstance(row.get('title'),str) or not isinstance(row.get('description',''),str):
+                raise ValueError('Titre et description doivent être du texte')
             if int(row.get('seller_reviews') or 0) < 0:
                 raise ValueError('Nombre d’avis invalide')
             row = dict(row)
+            if 'condition_confirmed' in row and not isinstance(row['condition_confirmed'],bool):
+                row['condition_confirmed'] = str(row['condition_confirmed']).lower() in ('true','1','oui')
             row['id'] = str(row['id'])
             clean.append(row)
         count = 0
         with self.db:
             for row in clean:
-                old = self.db.execute('SELECT status FROM listings WHERE id=?', (row['id'],)).fetchone()
+                old = self.db.execute('SELECT status,payload FROM listings WHERE id=?', (row['id'],)).fetchone()
                 if old is None:
                     self.db.execute('INSERT INTO listings(id,payload) VALUES (?,?)', (row['id'], json.dumps(row, ensure_ascii=False)))
                     count += 1
                 elif old['status'] == 'repéré':
+                    previous = json.loads(old['payload'])
+                    locked = previous.get('_verified_fields', [])
+                    if money(previous['price']) != money(row['price']):
+                        locked = [k for k in locked if k not in ('buyer_fee','shipping')]
+                    for key in locked:
+                        row[key] = previous.get(key)
+                    row['_verified_fields'] = locked
                     self.db.execute('UPDATE listings SET payload=? WHERE id=?', (json.dumps(row, ensure_ascii=False), row['id']))
         return count
 
@@ -128,3 +164,34 @@ class Store:
             cursor = self.db.execute('UPDATE listings SET status="vendu",proceeds=?,sold_on=? WHERE id=? AND status="acheté"', (proceeds, datetime.now(timezone.utc).isoformat(), item_id))
             if cursor.rowcount != 1:
                 raise ValueError('Il faut d’abord enregistrer l’achat')
+
+    def patch(self, item_id, values):
+        row = self.db.execute('SELECT * FROM listings WHERE id=?', (item_id,)).fetchone()
+        if not row or row['status'] != 'repéré':
+            raise ValueError('Seules les annonces non achetées sont modifiables')
+        item = json.loads(row['payload'])
+        allowed = ('shipping', 'buyer_fee', 'seller_reviews', 'condition_confirmed', 'description')
+        locked = set(item.get('_verified_fields', []))
+        for key in allowed:
+            if key not in values:
+                continue
+            value = values[key]
+            if key in ('shipping','buyer_fee'):
+                if value not in ('', None):
+                    money(value)
+                else:
+                    value = None
+            elif key == 'seller_reviews':
+                value = int(value) if value not in ('', None) else None
+                if value is not None and value < 0:
+                    raise ValueError('Avis invalides')
+            elif key == 'condition_confirmed':
+                if not isinstance(value, bool):
+                    raise ValueError('Confirmation invalide')
+            elif not isinstance(value, str) or len(value) > 12000:
+                raise ValueError('Description trop longue')
+            item[key] = value
+            locked.add(key)
+        item['_verified_fields'] = sorted(locked)
+        with self.db:
+            self.db.execute('UPDATE listings SET payload=? WHERE id=?', (json.dumps(item, ensure_ascii=False), item_id))

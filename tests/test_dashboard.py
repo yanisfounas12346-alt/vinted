@@ -40,4 +40,18 @@ class DashboardTests(unittest.TestCase):
         finally:
             server.shutdown();server.server_close();thread.join()
 
+    def test_extension_token_only_allows_bridge(self):
+        server=make_server(self.dashboard)
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        base=f'http://127.0.0.1:{server.server_port}'
+        headers={'Content-Type':'application/json','X-Bridge-Token':self.dashboard.bridge_token,'Origin':'chrome-extension://local-test'}
+        try:
+            body=json.dumps({'rows':[dict(id='vinted:1',title='New 3DS XL',price=20,url='https://www.vinted.fr/items/1-test')]}).encode()
+            result=json.load(urlopen(Request(base+'/api/bridge',data=body,headers=headers)))
+            self.assertEqual(result['new'],1)
+            with self.assertRaises(HTTPError) as caught:urlopen(Request(base+'/api/settings',data=b'{}',headers=headers))
+            self.assertEqual(caught.exception.code,403)
+        finally:
+            server.shutdown();server.server_close();thread.join()
+
 if __name__=='__main__':unittest.main()

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Repère — Pont local",
+  "version": "0.3.0",
+  "description": "Transmet à votre application PC les annonces visibles des pages Vinted et Leboncoin que vous ouvrez.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Repère — Envoyer les annonces visibles"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

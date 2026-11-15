@@ -104,7 +104,7 @@ class App(tk.Tk):
             result = evaluate(item, self.references(), self.settings, cash)
             self.items[row['id']] = (dict(row), item, result)
             state = result['status'] if row['status'] == 'repéré' else row['status']
-            self.table.insert('', 'end', iid=row['id'], values=(state, item['title'], f"{money(item['price']) / 100:.2f}", f"{result['cost'] / 100:.2f}", f"{result['floor'] / 100:.2f}", f"{result['margin'] / 100:.2f}"), tags=(state,))
+            self.table.insert('', 'end', iid=row['id'], values=(state, item['title'], f"{money(item['price']) / 100:.2f}", f"{result['cost'] / 100:.2f}", f"{result['floor'] / 100:.2f}", (f"{result['margin'] / 100:.2f}" if result['margin'] is not None else 'À compléter')), tags=(state,))
             if state == 'Alerte' and row['id'] not in self.alerted:
                 self.alerted.add(row['id'])
                 self.bell()

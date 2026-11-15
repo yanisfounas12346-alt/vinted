@@ -9,7 +9,7 @@ class EngineTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = Store(Path(self.tmp.name) / 'test.db')
-        self.item = dict(id='test:1', title='New 3DS XL', description='fonctionnelle', price='20', shipping='3', buyer_fee='2', seller_reviews='5')
+        self.item = dict(id='test:1', title='New 3DS XL', description='fonctionnelle', price='20', shipping='3', buyer_fee='2', seller_reviews='5',condition_confirmed=True)
         self.ref = [dict(aliases='new 3ds xl', floor='100', checked_on=date.today().isoformat(), source='relevé manuel')]
     def tearDown(self):
         self.store.db.close()
@@ -19,8 +19,8 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(result['status'], 'Alerte')
         self.assertEqual(result['cost'], 2500)
         self.assertEqual(result['margin'], 6900)
-    def test_missing_shipping_rejected_atomically(self):
-        bad = dict(self.item, id='bad', shipping='')
+    def test_invalid_shipping_rejected_atomically(self):
+        bad = dict(self.item, id='bad', shipping='invalide')
         with self.assertRaises(ValueError): self.store.ingest([self.item, bad])
         self.assertEqual(len(self.store.rows()), 0)
     def test_nonfinite_and_negative(self):

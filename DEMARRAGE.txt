@@ -1,0 +1,20 @@
+REPERE V.03 — DEMARRAGE WINDOWS
+
+1. Extraire tout le ZIP (ne pas lancer depuis l'archive).
+2. Installer Python 3.11 ou plus recent si necessaire.
+3. Double-cliquer Lancer.bat et garder le terminal ouvert.
+4. Cliquer Connexions dans le tableau de bord.
+5. Pour Vinted/Leboncoin : installer le dossier extension dans Edge/Chrome,
+   puis copier la configuration locale dans l'extension.
+6. Ouvrir une recherche Vinted/Leboncoin, cliquer l'extension puis Envoyer.
+7. Documenter les cotes dans References & cotes, puis completer les frais
+   et l'etat des annonces interessantes dans leur fiche.
+
+ACCES DIRECT VINTED : experimental ; un refus HTTP 403 a ete constate
+lors du test depuis cet environnement. Un refus arrete la surveillance.
+Le pont transmet les cartes visibles ; sa surveillance optionnelle recharge la recherche toutes les 90 secondes et s’arrete au premier echec.
+
+MISE A JOUR : avant remplacement, fermer l'ancien terminal et copier le
+sous-dossier data de l'ancienne version vers le nouveau dossier Repere_PC.
+
+Le logiciel ne promet aucun rendement ni prix de reprise garanti.
